@@ -75,17 +75,15 @@ def nullHeuristic(state, problem=None):
   return 0
 
 def commonSearch(problem, fringe, heuristic=nullHeuristic):
-  expanded = set()
+  expanded = []
   fringe.push((problem.getStartState(), [], 0))
-
   while not fringe.isEmpty():
     curState, curMoves, curCost = fringe.pop()
 
-    if (curState in expanded):
+    if curState in expanded:
       continue
 
-    expanded.add(curState)
-
+    expanded.append(curState)
     if problem.isGoalState(curState):
       return curMoves
 
