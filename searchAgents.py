@@ -35,6 +35,8 @@ import util
 import time
 import search
 import searchAgents
+from collections import defaultdict
+
 
 class GoWestAgent(Agent):
   "An agent that goes West until it can't."
@@ -419,22 +421,22 @@ class AStarFoodSearchAgent(SearchAgent):
 def foodHeuristic(state, problem):
   """
   Your heuristic for the FoodSearchProblem goes here.
-  
+
   This heuristic must be consistent to ensure correctness.  First, try to come up
   with an admissible heuristic; almost all admissible heuristics will be consistent
   as well.
-  
+
   If using A* ever finds a solution that is worse uniform cost search finds,
   your heuristic is *not* consistent, and probably not admissible!  On the other hand,
   inadmissible or inconsistent heuristics may find optimal solutions, so be careful.
-  
-  The state is a tuple ( pacmanPosition, foodGrid ) where foodGrid is a 
+
+  The state is a tuple ( pacmanPosition, foodGrid ) where foodGrid is a
   Grid (see game.py) of either True or False. You can call foodGrid.asList()
   to get a list of food coordinates instead.
-  
+
   If you want access to info like walls, capsules, etc., you can query the problem.
   For example, problem.walls gives you a Grid of where the walls are.
-  
+
   If you want to *store* information to be reused in other calls to the heuristic,
   there is a dictionary called problem.heuristicInfo that you can use. For example,
   if you only want to count the walls once and store that value, try:
@@ -442,22 +444,57 @@ def foodHeuristic(state, problem):
   Subsequent calls to this heuristic can access problem.heuristicInfo['wallCount']
   """
 
+  def build_mst(graph):
+    visited = set()
+    mst = defaultdict(list)
+
+    pq = util.PriorityQueueWithFunction(lambda t: t[2])
+    ver = graph.keys()[0]
+    t = graph[ver]
+    for i in t:
+        pq.push((ver, i[0], i[1]))
+    visited.add(ver)
+
+    while not pq.isEmpty():
+      from_vertex, to_vertex, weight = pq.pop()
+      if to_vertex not in visited:
+        visited.add(to_vertex)
+        mst[from_vertex].append((to_vertex, weight))
+        mst[to_vertex].append((from_vertex, weight))
+        for neighbor in graph[to_vertex]:
+            if neighbor[0] not in visited:
+                pq.push((to_vertex, neighbor[0], neighbor[1]))
+
+    return mst
+
+  def mst_sum_weights(mst):
+      visited = set()
+      sum = 0
+      for from_vertex in mst.keys():
+          if from_vertex not in visited:
+            for to_vertex, weight in mst[from_vertex]:
+                if (from_vertex, to_vertex) not in visited or (to_vertex, from_vertex) not in visited:
+                    visited.add((from_vertex, to_vertex))
+                    visited.add((to_vertex, from_vertex))
+                    sum += weight
+
+      return sum
+
   position, foodGrid = state
-  foodCoords = []
-  for i, foodList in enumerate(foodGrid):
-    for j, food in enumerate(foodList):
-      if food:
-        foodCoords.append((i, j))
+  foodCoords = foodGrid.asList() + [position]
 
-  distance = 0
-  current = position
-  # finds the sum of minimum distances from the state to the corner, and from there to the other corners respectively
-  while len(foodCoords) > 0:
-    minDistance, current = min(map(lambda corner: (util.manhattanDistance(corner, current), corner), foodCoords))
-    distance += minDistance
-    foodCoords.remove(current)
+  problem.heuristicInfo['graph'] = defaultdict(list)
+  graph = problem.heuristicInfo['graph']
+  for coord in foodCoords:
+    for coord2 in foodCoords:
+      if coord != coord2:
+        graph[coord].append((coord2, util.manhattanDistance(coord, coord2)))
 
-  return distance
+
+  if len(graph) == 0:
+      return 0
+
+  return mst_sum_weights(build_mst(graph))
 
 class ClosestDotSearchAgent(SearchAgent):
   "Search for all food using a sequence of searches"
@@ -479,13 +516,8 @@ class ClosestDotSearchAgent(SearchAgent):
   def findPathToClosestDot(self, gameState):
     "Returns a path (a list of actions) to the closest dot, starting from gameState"
     # Here are some useful elements of the startState
-    startPosition = gameState.getPacmanPosition()
-    food = gameState.getFood()
-    walls = gameState.getWalls()
     problem = AnyFoodSearchProblem(gameState)
-
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    return search.bfs(problem)
   
 class AnyFoodSearchProblem(PositionSearchProblem):
   """
@@ -518,10 +550,8 @@ class AnyFoodSearchProblem(PositionSearchProblem):
     The state is Pacman's position. Fill this in with a goal test
     that will complete the problem definition.
     """
-    x,y = state
-    
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    x, y = state
+    return self.food[x][y]
 
 ##################
 # Mini-contest 1 #

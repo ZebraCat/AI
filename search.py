@@ -75,19 +75,19 @@ def nullHeuristic(state, problem=None):
   return 0
 
 def commonSearch(problem, fringe, heuristic=nullHeuristic):
-  expanded = []
-  fringe.push((problem.getStartState(), [], 0))
+  expanded = set()
+  fringe.push((problem.getStartState(), [], 0, 0))
   while not fringe.isEmpty():
-    curState, curMoves, curCost = fringe.pop()
+    curState, curMoves, curCost, heur = fringe.pop()
 
     if curState in expanded:
       continue
 
-    expanded.append(curState)
+    expanded.add(curState)
     if problem.isGoalState(curState):
       return curMoves
 
-    map(lambda (state, direction, cost): fringe.push((state, curMoves + [direction], curCost + cost + heuristic(state, problem))), problem.getSuccessors(curState))
+    map(lambda (state, direction, cost): fringe.push((state, curMoves + [direction], curCost + cost, curCost + cost + heuristic(state, problem))), problem.getSuccessors(curState))
 
   return []
 
@@ -118,7 +118,7 @@ def uniformCostSearch(problem):
 
 def aStarSearch(problem, heuristic=nullHeuristic):
   "Search the node that has the lowest combined cost and heuristic first."
-  return commonSearch(problem, util.PriorityQueueWithFunction(lambda x: x[2]), heuristic)
+  return commonSearch(problem, util.PriorityQueueWithFunction(lambda x: x[3]), heuristic)
   
 # Abbreviations
 bfs = breadthFirstSearch
